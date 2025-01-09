@@ -1,0 +1,55 @@
+name: Test and Build
+ 
+permissions:
+  pull-requests: write
+ 
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+ 
+jobs:
+  test:
+    name: Run Unit Tests and Coverage
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+ 
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'  # Use an appropriate JDK version for your project
+ 
+      - name: Set up Scala and sbt
+        uses: olafurpg/setup-scala@v10
+        with:
+          java-version: '11'
+          sbt-version: '1.8.0'
+ 
+      - name: Install sbt
+        run: |
+          curl -Lo sbt-launcher.jar https://github.com/sbt/sbt/releases/download/v1.5.5/sbt-1.5.5.jar
+          echo "java -Xmx512M -Xms512M -jar sbt-launcher.jar" > sbt
+          chmod +x sbt
+          ./sbt --version
+ 
+      - name: Install dependencies and run tests
+        run: |
+          ./sbt update
+          ./sbt test
+ 
+      - name: Post comment to PR with test results
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: Test Results
+          append: true
+          message: |
+            ```
+            ##################Start ##################
+            $(cat target/test-logs/test-output.log)  # Assuming test output is saved here
+            ##################END####################
+            ```
